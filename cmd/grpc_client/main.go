@@ -2,37 +2,34 @@ package main
 
 import (
 	"context"
-	"log"
-	"time"
-
+	desc "github.com/Alzoww/go-grpc-gateway-example/pkg/note_v1"
 	"github.com/fatih/color"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	desc "github.com/olezhek28/go-grpc-gateway-example/pkg/note_v1"
+	"log"
+	"time"
 )
 
 const (
-	address = "localhost:50051"
-	noteID  = 12
+	grpcAddr = "localhost:50051"
 )
 
 func main() {
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("failed to connect to server: %v", err)
+		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
-	c := desc.NewNoteV1Client(conn)
+	client := desc.NewNoteV1Client(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	r, err := c.Get(ctx, &desc.GetRequest{Id: noteID})
+	resp, err := client.Get(ctx, &desc.GetRequest{Id: 12})
 	if err != nil {
-		log.Fatalf("failed to get note by id: %v", err)
+		log.Fatalf("could not get note: %v", err)
 	}
 
-	log.Printf(color.RedString("Note info:\n"), color.GreenString("%+v", r.GetNote()))
+	log.Printf(color.GreenString("Note info:\n"), color.BlueString("%+v\n", resp.GetNote()))
 }

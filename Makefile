@@ -2,7 +2,7 @@ LOCAL_BIN:=$(CURDIR)/bin
 
 install-deps:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
-	GOBIN=$(LOCAL_BIN) go install -mod=mod google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+	GOBIN=$(LOCAL_BIN) go install -mod=mod google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3
 	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.15.2
 
 get-deps:
@@ -23,6 +23,16 @@ generate-note-api:
 	--grpc-gateway_out=pkg/note_v1 --grpc-gateway_opt=paths=source_relative \
 	--plugin=protoc-gen-grpc-gateway=bin/protoc-gen-grpc-gateway \
 	api/note_v1/note.proto
+
+generate-note-api-with-yours-plugins:
+	mkdir -p pkg/note_v1
+	protoc --proto_path api/note_v1 --proto_path vendor.protogen \
+	--go_out=pkg/note_v1 --go_opt=paths=source_relative \
+	--go-grpc_out=pkg/note_v1 --go-grpc_opt=paths=source_relative \
+	--grpc-gateway_out=pkg/note_v1 --grpc-gateway_opt=paths=source_relative \
+	api/note_v1/note.proto
+
+
 
 vendor-proto:
 		@if [ ! -d vendor.protogen/google ]; then \

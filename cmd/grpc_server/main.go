@@ -2,19 +2,17 @@ package main
 
 import (
 	"context"
-	"log"
-	"net"
-	"net/http"
-	"sync"
-
-	"github.com/brianvoe/gofakeit"
+	desc "github.com/Alzoww/go-grpc-gateway-example/pkg/note_v1"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	desc "github.com/olezhek28/go-grpc-gateway-example/pkg/note_v1"
+	"log"
+	"net"
+	"net/http"
+	"sync"
 )
 
 const (
@@ -22,22 +20,21 @@ const (
 	httpAddress = "localhost:8080"
 )
 
-type server struct {
+type Server struct {
 	desc.UnimplementedNoteV1Server
 }
 
-// Get ...
-func (s *server) Get(ctx context.Context, req *desc.GetRequest) (*desc.GetResponse, error) {
-	log.Printf("Note id: %d", req.GetId())
+func (s *Server) Get(ctx context.Context, in *desc.GetRequest) (*desc.GetResponse, error) {
+	log.Printf("Note id: %d", in.GetId())
 
 	return &desc.GetResponse{
 		Note: &desc.Note{
-			Id: req.GetId(),
+			Id: in.GetId(),
 			Info: &desc.NoteInfo{
 				Title:    gofakeit.BeerName(),
 				Context:  gofakeit.IPv4Address(),
 				Author:   gofakeit.Name(),
-				IsPublic: gofakeit.Bool(),
+				IsPublic: true,
 			},
 			CreatedAt: timestamppb.New(gofakeit.Date()),
 			UpdatedAt: timestamppb.New(gofakeit.Date()),
@@ -48,7 +45,7 @@ func (s *server) Get(ctx context.Context, req *desc.GetRequest) (*desc.GetRespon
 func main() {
 	ctx := context.Background()
 
-	wg := &sync.WaitGroup{}
+	wg := sync.WaitGroup{}
 	wg.Add(2)
 
 	go func() {
@@ -71,22 +68,20 @@ func main() {
 }
 
 func startGrpcServer() error {
-	grpcServer := grpc.NewServer(
-		grpc.Creds(insecure.NewCredentials()),
-	)
+	grpcServer := grpc.NewServer(grpc.Creds(insecure.NewCredentials()))
 
 	reflection.Register(grpcServer)
 
-	desc.RegisterNoteV1Server(grpcServer, &server{})
+	desc.RegisterNoteV1Server(grpcServer, &Server{})
 
-	list, err := net.Listen("tcp", grpcAddress)
+	listener, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("gRPC server listening at %v\n", grpcAddress)
+	log.Printf("grpc server listening on %s", grpcAddress)
 
-	return grpcServer.Serve(list)
+	return grpcServer.Serve(listener)
 }
 
 func startHttpServer(ctx context.Context) error {
@@ -96,12 +91,10 @@ func startHttpServer(ctx context.Context) error {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	err := desc.RegisterNoteV1HandlerFromEndpoint(ctx, mux, grpcAddress, opts)
-	if err != nil {
+	if err := desc.RegisterNoteV1HandlerFromEndpoint(ctx, mux, grpcAddress, opts); err != nil {
 		return err
 	}
 
 	log.Printf("http server listening at %v\n", httpAddress)
-
 	return http.ListenAndServe(httpAddress, mux)
 }
